@@ -1,49 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
+import React, { useEffect, useMemo, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
 import './App.css';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import LoginPage from './pages/Login';
+import SignupPage from './pages/Signup';
+import ChatPage from './pages/Chat';
 
-// PUBLIC_INTERFACE
-function App() {
+// Header component
+function Header() {
+  const { user, logout } = useAuth();
   const [theme, setTheme] = useState('light');
+  const navigate = useNavigate();
 
-  // Effect to apply theme to document element
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // PUBLIC_INTERFACE
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-  };
-
   return (
-    <div className="App">
-      <header className="App-header">
-        <button 
-          className="theme-toggle" 
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+    <header className="header">
+      <div className="brand">
+        <div className="brand-badge">QnA</div>
+        Intelligent Chatbot
+      </div>
+      <div className="header-actions">
+        <button className="btn btn-ghost" onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}>
+          {theme === 'light' ? '🌙' : '☀️'}
         </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+        {user ? (
+          <>
+            <span className="btn">Hi, {user.username}</span>
+            <button className="btn" onClick={() => navigate('/')}>Chat</button>
+            <button className="btn" onClick={logout}>Logout</button>
+          </>
+        ) : (
+          <>
+            <Link className="btn" to="/login">Login</Link>
+            <Link className="btn btn-primary" to="/signup">Sign up</Link>
+          </>
+        )}
+      </div>
+    </header>
   );
 }
 
-export default App;
+// Guarded route
+function PrivateRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  return user ? children : <Navigate to="/login" replace />;
+}
+
+// PUBLIC_INTERFACE
+function AppShell() {
+  /** Root application shell with routes and header. */
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Header />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <ChatPage />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
+
+export default AppShell;
