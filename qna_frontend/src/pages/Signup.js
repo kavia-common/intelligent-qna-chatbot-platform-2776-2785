@@ -4,6 +4,23 @@ import { useAuth } from '../context/AuthContext';
 import { signup as signupSvc, login as loginSvc } from '../services/auth';
 import { ErrorBanner } from '../components/UI';
 
+// Helper to format DRF error responses into readable text
+function formatErrors(errData) {
+  if (!errData) return 'Unable to create account';
+  if (typeof errData === 'string') return errData;
+  // DRF serializer errors look like: { field: ["msg1", "msg2"], non_field_errors: ["..."] }
+  const parts = [];
+  for (const [key, val] of Object.entries(errData)) {
+    const msgs = Array.isArray(val) ? val.join('; ') : String(val);
+    if (key === 'non_field_errors' || key === 'detail') {
+      parts.push(msgs);
+    } else {
+      parts.push(`${key}: ${msgs}`);
+    }
+  }
+  return parts.join(' | ') || 'Unable to create account';
+}
+
 // PUBLIC_INTERFACE
 export default function SignupPage() {
   /** Signup form to create a new user account. */
@@ -18,14 +35,28 @@ export default function SignupPage() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Basic client-side validation to avoid unnecessary API calls
+    const username = form.username.trim();
+    const password = form.password;
+    if (!username) {
+      setError('Username is required.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await signupSvc(form);
+      await signupSvc({ username, email: form.email?.trim(), password });
       // Auto-login for convenience
-      await loginSvc(form.username, form.password);
+      await loginSvc(username, password);
       navigate('/', { replace: true });
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Unable to create account');
+      const apiData = err?.response?.data;
+      setError(formatErrors(apiData) || 'Unable to create account');
     } finally {
       setLoading(false);
     }
