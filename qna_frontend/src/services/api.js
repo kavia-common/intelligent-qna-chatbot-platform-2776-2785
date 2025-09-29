@@ -28,6 +28,34 @@ const api = axios.create({
   },
 });
 
+/**
+ * Redirect helper for session-expired flows.
+ * - Clears tokens from localStorage
+ * - Navigates to /login with a message state
+ */
+function redirectToLogin(sessionMessage = 'Session expired. Please login again.') {
+  try {
+    // Clear stored auth data
+    localStorage.removeItem('access');
+    localStorage.removeItem('refresh');
+    localStorage.removeItem('user');
+    // Prefer SPA navigation if possible
+    const nav = window.__APP_NAVIGATE__;
+    if (typeof nav === 'function') {
+      nav('/login', { replace: true, state: { message: sessionMessage } });
+    } else {
+      // Fallback to hard redirect
+      const url = new URL(window.location.href);
+      url.hash = ''; // ensure clean hash
+      // We keep the origin and simply point to /login
+      window.location.assign('/login');
+    }
+  } catch {
+    // If anything fails, at least try to send the user to login
+    try { window.location.assign('/login'); } catch { /* noop */ }
+  }
+}
+
 // Attach access token if present
 api.interceptors.request.use((config) => {
   try {
@@ -55,5 +83,18 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Global response interceptor to catch 401s and force logout + redirect
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    if (status === 401) {
+      // Ensure storage is cleared and user is navigated to login
+      redirectToLogin('Session expired. Please login again.');
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;

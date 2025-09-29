@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ErrorBanner } from '../components/UI';
 
@@ -10,6 +10,18 @@ export default function LoginPage() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // If we were redirected here after session expiry, show info message.
+    const maybeMsg = location?.state?.message;
+    if (maybeMsg) {
+      setError(maybeMsg);
+      // clear the state message so it doesn't persist across navigations
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (user) return <Navigate to="/" replace />;
 

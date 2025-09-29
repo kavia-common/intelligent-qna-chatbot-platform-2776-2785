@@ -24,7 +24,8 @@ export default function ChatPage() {
           setActiveId(data[0].id);
         }
       } catch (e) {
-        setError(e?.response?.status === 401 ? 'Unauthorized. Please login again.' : 'Failed to load conversations.');
+        // 401 is handled globally; show generic error for other cases
+        setError('Failed to load conversations.');
       } finally {
         setLoading(false);
       }
@@ -40,9 +41,7 @@ export default function ChatPage() {
         setMessages(conv?.messages || []);
       } catch (e) {
         setMessages([]);
-        if (e?.response?.status === 401) {
-          setError('Unauthorized. Please login again.');
-        }
+        // 401 handled globally; optionally show non-401 error
       }
     })();
   }, [activeId]);
@@ -57,7 +56,7 @@ export default function ChatPage() {
       setActiveId(conv.id);
       setError('');
     } catch (e) {
-      setError(e?.response?.status === 401 ? 'Unauthorized. Please login again.' : 'Failed to create conversation.');
+      setError('Failed to create conversation.');
     }
   };
 
@@ -73,7 +72,7 @@ export default function ChatPage() {
       }
       setError('');
     } catch (e) {
-      setError(e?.response?.status === 401 ? 'Unauthorized. Please login again.' : 'Failed to delete conversation.');
+      setError('Failed to delete conversation.');
     }
   };
 
@@ -99,7 +98,7 @@ export default function ChatPage() {
       setConversations(refreshed || []);
       setError('');
     } catch (e) {
-      setError(e?.response?.status === 401 ? 'Unauthorized. Please login again.' : 'Failed to send message.');
+      setError('Failed to send message.');
     } finally {
       setSending(false);
     }

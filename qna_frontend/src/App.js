@@ -16,6 +16,16 @@ function Header() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  // Expose navigate globally for API 401 interceptor redirection.
+  useEffect(() => {
+    window.__APP_NAVIGATE__ = navigate;
+    return () => {
+      if (window.__APP_NAVIGATE__ === navigate) {
+        delete window.__APP_NAVIGATE__;
+      }
+    };
+  }, [navigate]);
+
   return (
     <header className="header">
       <div className="brand">
