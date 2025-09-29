@@ -1,0 +1,4 @@
+{
+    "command": "npm run test",
+    "working_directory": "/home/kavia/workspace/code-generation/intelligent-qna-chatbot-platform-2776-2785/qna_frontend"
+}
