@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import ChatWindow from '../components/ChatWindow';
 import { createConversation, deleteConversation, getConversation, listConversations, sendMessage } from '../services/conversations';
+import { ErrorBanner } from '../components/UI';
 
 // PUBLIC_INTERFACE
 export default function ChatPage() {
@@ -11,6 +12,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // Initial load
   useEffect(() => {
@@ -22,7 +24,7 @@ export default function ChatPage() {
           setActiveId(data[0].id);
         }
       } catch (e) {
-        // ignore for now; errors will show in network console
+        setError(e?.response?.status === 401 ? 'Unauthorized. Please login again.' : 'Failed to load conversations.');
       } finally {
         setLoading(false);
       }
@@ -38,6 +40,9 @@ export default function ChatPage() {
         setMessages(conv?.messages || []);
       } catch (e) {
         setMessages([]);
+        if (e?.response?.status === 401) {
+          setError('Unauthorized. Please login again.');
+        }
       }
     })();
   }, [activeId]);
@@ -45,20 +50,30 @@ export default function ChatPage() {
   const onCreate = async () => {
     const title = prompt('Title for the new conversation?', 'New conversation');
     if (!title) return;
-    const conv = await createConversation(title);
-    const updated = [conv, ...conversations];
-    setConversations(updated);
-    setActiveId(conv.id);
+    try {
+      const conv = await createConversation(title);
+      const updated = [conv, ...conversations];
+      setConversations(updated);
+      setActiveId(conv.id);
+      setError('');
+    } catch (e) {
+      setError(e?.response?.status === 401 ? 'Unauthorized. Please login again.' : 'Failed to create conversation.');
+    }
   };
 
   const onDelete = async (id) => {
     // confirm
     if (!window.confirm('Delete this conversation?')) return;
-    await deleteConversation(id);
-    const next = conversations.filter(c => c.id !== id);
-    setConversations(next);
-    if (activeId === id) {
-      setActiveId(next[0]?.id ?? null);
+    try {
+      await deleteConversation(id);
+      const next = conversations.filter(c => c.id !== id);
+      setConversations(next);
+      if (activeId === id) {
+        setActiveId(next[0]?.id ?? null);
+      }
+      setError('');
+    } catch (e) {
+      setError(e?.response?.status === 401 ? 'Unauthorized. Please login again.' : 'Failed to delete conversation.');
     }
   };
 
@@ -82,6 +97,9 @@ export default function ChatPage() {
       // refresh conversations list
       const refreshed = await listConversations();
       setConversations(refreshed || []);
+      setError('');
+    } catch (e) {
+      setError(e?.response?.status === 401 ? 'Unauthorized. Please login again.' : 'Failed to send message.');
     } finally {
       setSending(false);
     }
@@ -96,7 +114,12 @@ export default function ChatPage() {
         onCreate={onCreate}
         onDelete={onDelete}
       />
-      <ChatWindow messages={messages} onSend={onSend} sending={sending} />
+      <section style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: 8 }}>
+          <ErrorBanner message={error} />
+        </div>
+        <ChatWindow messages={messages} onSend={onSend} sending={sending} />
+      </section>
     </main>
   );
 }
